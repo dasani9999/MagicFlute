@@ -654,6 +654,9 @@
                             await processPlugin(card, processBtn);
                             const progress = ((i + 1) / workflowCards.length) * 100; // Calculate progress
                             $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress); // Update progress bar
+                        } else { // Update progress bar for Variable plugins or other non-processable cards
+                            const progress = (i / workflowCards.length) * 100; // Update progress calculation
+                            $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress);
                         }
                     }
                 } catch (error) {
