@@ -96,7 +96,7 @@
                         var pluginConfig = response;
                         
                         cardCount++;
-                        var pluginCard = $('<div>').addClass('card mb-3').attr('id', 'card_' + cardCount).attr('card-instance-id', cardCount);
+                        var pluginCard = $('<div>').addClass('card mb-3').attr('id', 'card_' + cardCount).attr('card-instance-id', cardCount).attr('plugin-id', pluginId).attr('serial-id', instanceId).attr('plugin-type', pluginConfig.plugin_type);
                         var cardHeader = $('<div>').addClass('card-header d-flex justify-content-between align-items-center');
                         var buttonGroup = $('<div>').addClass('btn-group me-2');
                         var closeButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="fa fa-times text-danger"></i>').on('click', function() {
@@ -672,14 +672,14 @@
             } {% endcomment %}
 
             async function processWorkflow() {
-                const workflowCards = $('#workflow-area .card').toArray();
+                const workflowData = $('#workflow-area .card').toArray();
                 const pluginsData = []; // Initialize an empty array to store plugin data
               
                 // Loop through each plugin in the workflow
-                for (const plugin of workflowData.plugins) {
-                  const pluginId = plugin.pluginId;
-                  const instanceId = plugin.instanceId;
-                  const inputData = plugin.inputData;
+                for (var plugin of workflowData){
+                  const pluginId = $(plugin).attr('plugin-id');
+                  const instanceId = $(plugin).attr('serial-id');
+                  const inputData = $(plugin.childNodes[1].childNodes[0]).serializeArray();
               
                   // Process the plugin and get the result
                   const pluginResult = await processPlugin(pluginId, instanceId, inputData);
