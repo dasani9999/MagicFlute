@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootstrap Layout with Draggable Tables</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        .navbar {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table-container {
+            border: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+        }
+        .table-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+        .draggable {
+            cursor: ns-resize;
+        }
+        .table-content {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        #leftColumn {
+            height: calc(100vh - 57px); /* Subtract navbar height + 1px border */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-left: 0px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Your Logo</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- Left column -->
+            <div id="leftColumn" class="col-3">
+                <!-- First table (non-draggable) -->
+                <div id="table1" class="table-container">
+                    <div class="table-header">Table 1</div>
+                    <div class="table-content">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Header 1</th>
+                                    <th>Header 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Data 1</td><td>Data 2</td></tr>
+                                <tr><td>Data 3</td><td>Data 4</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Second table (draggable) -->
+                <div id="table2" class="table-container">
+                    <div class="table-header draggable">Table 2 (Draggable)</div>
+                    <div class="table-content">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Header 1</th>
+                                    <th>Header 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Data 1</td><td>Data 2</td></tr>
+                                <tr><td>Data 3</td><td>Data 4</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Third table (draggable) -->
+                <div id="table3" class="table-container">
+                    <div class="table-header draggable">Table 3 (Draggable)</div>
+                    <div class="table-content">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Header 1</th>
+                                    <th>Header 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Data 1</td><td>Data 2</td></tr>
+                                <tr><td>Data 3</td><td>Data 4</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column -->
+            <div class="col-9">
+                <h2>Main Content Area</h2>
+                <p>This is where your main content would go.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let isDragging = false;
+            let startY, draggedHeader, initialHeights;
+            const minTableHeight = 50; // Minimum height for tables 1 and 2
+            const animationDuration = 300; // Animation duration in milliseconds
+            let clickTimer = null;
+            let clickDelay = 200; // Delay in milliseconds
+            let table3HeaderHeight;
+    
+            function initializeTableHeights(animate = false) {
+                let availableHeight = $('#leftColumn').height();
+                table3HeaderHeight = $('#table3 .table-header').outerHeight();
+                let headerHeights = $('.table-header').toArray().reduce((sum, header) => sum + $(header).outerHeight(), 0);
+                let contentHeight = (availableHeight - headerHeights) / 3;
+                
+                $('.table-container').each(function(index) {
+                    let headerHeight = $(this).find('.table-header').outerHeight();
+                    let newHeight = contentHeight + headerHeight;
+                    if (animate) {
+                        $(this).animate({height: newHeight}, animationDuration);
+                    } else {
+                        $(this).height(newHeight);
+                    }
+                });
+                
+                if (animate) {
+                    setTimeout(updateTableContents, animationDuration);
+                } else {
+                    updateTableContents();
+                }
+            }
+    
+            function updateTableContents() {
+                $('.table-container').each(function() {
+                    let containerHeight = $(this).height();
+                    let headerHeight = $(this).find('.table-header').outerHeight();
+                    $(this).find('.table-content').height(containerHeight - headerHeight);
+                });
+            }
+    
+            function expandTable(tableId) {
+                let availableHeight = $('#leftColumn').height();
+                
+                if (tableId === 'table3') {
+                    let table1Height = minTableHeight;
+                    let table2Height = minTableHeight;
+                    let table3Height = availableHeight - table1Height - table2Height;
+                    
+                    $('#table1').animate({height: table1Height}, animationDuration);
+                    $('#table2').animate({height: table2Height}, animationDuration);
+                    $('#table3').animate({height: table3Height}, animationDuration);
+                } else {
+                    let expandedHeight = availableHeight - minTableHeight - table3HeaderHeight;
+                    
+                    $('#table1').animate({height: tableId === 'table1' ? expandedHeight : minTableHeight}, animationDuration);
+                    $('#table2').animate({height: tableId === 'table2' ? expandedHeight : minTableHeight}, animationDuration);
+                    $('#table3').animate({height: table3HeaderHeight}, animationDuration);
+                }
+    
+                setTimeout(updateTableContents, animationDuration);
+            }
+    
+            $('.table-header').mousedown(function(e) {
+                if (!$(this).hasClass('draggable')) return;
+                e.preventDefault();
+                isDragging = true;
+                startY = e.clientY;
+                draggedHeader = $(this);
+                initialHeights = {
+                    table1: $('#table1').height(),
+                    table2: $('#table2').height(),
+                    table3: $('#table3').height()
+                };
+    
+                $(document).mousemove(function(e) {
+                    if (!isDragging) return;
+                    
+                    let dy = e.clientY - startY;
+                    let draggedTable = draggedHeader.closest('.table-container');
+                    let availableHeight = $('#leftColumn').height();
+                    
+                    if (draggedTable.attr('id') === 'table2') {
+                        let newTable1Height = Math.max(minTableHeight, initialHeights.table1 + dy);
+                        let newTable2Height = Math.max(minTableHeight, initialHeights.table2 - dy);
+                        let newTable3Height = availableHeight - newTable1Height - newTable2Height;
+                        
+                        if (newTable3Height >= table3HeaderHeight) {
+                            $('#table1').height(newTable1Height);
+                            $('#table2').height(newTable2Height);
+                            $('#table3').height(newTable3Height);
+                        }
+                    } else if (draggedTable.attr('id') === 'table3') {
+                        let newTable2Height = Math.max(minTableHeight, initialHeights.table2 + dy);
+                        let newTable3Height = Math.max(table3HeaderHeight, availableHeight - newTable2Height - $('#table1').height());
+                        
+                        $('#table2').height(newTable2Height);
+                        $('#table3').height(newTable3Height);
+                    }
+                    
+                    updateTableContents();
+                });
+    
+                $(document).mouseup(function() {
+                    isDragging = false;
+                    $(document).off('mousemove');
+                    $(document).off('mouseup');
+                });
+            });
+    
+            $('.table-header').on('click', function(e) {
+                let tableId = $(this).closest('.table-container').attr('id');
+                
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    
+                    // Double click detected
+                    setTimeout(function() {
+                        expandTable(tableId);
+                    }, clickDelay);
+                } else {
+                    clickTimer = setTimeout(function() {
+                        clickTimer = null;
+                        
+                        // Single click actions here (if any)
+                    }, clickDelay);
+                }
+                
+                // Triple click
+                if (e.originalEvent.detail === 3) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    setTimeout(function() {
+                        initializeTableHeights(true);
+                    }, clickDelay);
+                }
+            });
+    
+            $(window).resize(function() {
+                initializeTableHeights(false);
+            });
+            
+            initializeTableHeights(false);
+        });
+    </script>
+</body>
+</html>

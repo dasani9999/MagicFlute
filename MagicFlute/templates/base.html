@@ -1,0 +1,970 @@
+<!-- base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/world-32.png' %}"/>
+    <title>{% block title %}Magic Flute{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.0.2/css/bootstrap.min.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.0.2/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/css_styles.css' %}"/>
+</head>
+<body>
+    <header>
+        <!-- Add your header content here -->
+    </header>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <!-- Add your footer content here -->
+    </footer>
+
+    {% block scripts %}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let draggedPluginData = null;
+            let pluginResults = {};
+            let cardCount = 0;
+    
+            // Make plugin cells draggable
+            $('.plugin-cell').draggable({
+                helper: 'clone',
+                start: function(event, ui) {
+                    $(this).css('opacity', '0.5');
+                    draggedPluginData = {
+                        pluginName: $(this).data('plugin-name'),
+                        pluginId: $(this).data('plugin-id')
+                    };
+                    console.log('Dragging plugin:', draggedPluginData);
+                },
+                stop: function(event, ui) {
+                    $(this).css('opacity', '1');
+                }
+            });
+    
+            // Make the workflow area droppable and accept only plugin cells
+            $('#workflow-area').droppable({
+                accept: '.plugin-cell',
+                drop: function(event, ui) {
+                    var pluginName = ui.draggable.data('plugin-name');
+                    var pluginId = ui.draggable.data('plugin-id');
+                    console.log('Dropped element:', ui.draggable);
+                    console.log('Plugin name:', pluginName);
+                    console.log('Plugin ID:', pluginId);
+                    if (pluginName && pluginId) {
+                        createPluginCard(pluginName, pluginId);
+                    } else {
+                        console.error('Plugin name or ID is missing:', pluginName, pluginId);
+                    }
+                }
+            });
+    
+            // Handle double-click on plugin cells to create plugin cards
+            $('.plugin-cell').on('dblclick', function() {
+                var pluginName = $(this).data('plugin-name');
+                var pluginId = $(this).data('plugin-id');
+                console.log('Double-clicked element:', $(this));
+                console.log('Plugin name:', pluginName);
+                console.log('Plugin ID:', pluginId);
+                if (pluginName && pluginId) {
+                    createPluginCard(pluginName, pluginId);
+                } else {
+                    console.error('Plugin name or ID is missing:', pluginName, pluginId);
+                }
+            });
+    
+            // Function to create a plugin card
+            function createPluginCard(pluginName, pluginId) {
+                console.log('Creating plugin card:', pluginName, pluginId);
+                var instanceId = generateUniqueId();
+                updateCardNumbers();
+            
+                $.ajax({
+                    url: '/plugins/' + pluginId + '/config/',
+                    type: 'GET',
+                    success: function(response) {
+                        console.log('Received plugin config:', response);
+                        var pluginConfig = response;
+                        
+                        cardCount++;
+                        var pluginCard = $('<div>').addClass('card mb-3').attr('id', 'card_' + cardCount).attr('card-instance-id', cardCount);
+                        var cardHeader = $('<div>').addClass('card-header d-flex justify-content-between align-items-center');
+                        var buttonGroup = $('<div>').addClass('btn-group me-2');
+                        var closeButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="fa fa-times text-danger"></i>').on('click', function() {
+                            $('#info-circle-' + pluginCard.attr('card-instance-id')).remove();
+                            pluginCard.remove();
+                            updateCardNumbers();
+                        });
+                        var toggleButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="fa fa-expand"></i>').on('click', function() {
+                            cardBody.toggle();
+                            $(this).find('i').toggleClass('fa-expand fa-compress');
+                        });
+                        var moveUpButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="fa fa-chevron-up"></i>').on('click', function() {
+                            moveCardUp(pluginCard);
+                        });
+                        var moveDownButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="fa fa-chevron-down"></i>').on('click', function() {
+                            moveCardDown(pluginCard);
+                        });
+                        buttonGroup.append(closeButton, toggleButton, moveUpButton, moveDownButton);
+            
+                        var pluginTitle = $('<h5>').addClass('mb-0').text(pluginName);
+                        var badgeGroup = $('<div>').addClass('badge-group d-flex ms-auto');
+                        var inputBadgeGroup = $('<div>').addClass('input-badge-group d-flex me-2');
+                        var outputBadgeGroup = $('<div>').addClass('output-badge-group d-flex');
+                        badgeGroup.append(inputBadgeGroup, outputBadgeGroup);
+            
+                        cardHeader.append(buttonGroup, pluginTitle, badgeGroup);
+            
+                        var cardBody = $('<div>').addClass('card-body').hide();
+                        var form = $('<form>');
+            
+                        if (pluginConfig.plugin_type === 'variable_storage') {
+                            var inputContainer = $('<div>').addClass('input-container');
+                            
+                            // Initialize the plugin result for this instance
+                            pluginResults[instanceId] = {};
+                    
+                            function addInputRow() {
+                                var rowIndex = inputContainer.children().length + 1;
+                                var row = $('<div>').addClass('input-row mb-2 d-flex align-items-center');
+                                
+                                var deleteButton = $('<button>').addClass('btn btn-sm btn-danger me-2')
+                                    .html('<i class="fa fa-times"></i>')
+                                    .on('click', function(e) {
+                                        e.preventDefault();
+                                        row.remove();
+                                        delete pluginResults[instanceId]['output_' + rowIndex];
+                                        updateRowIndices();
+                                    });
+                                
+                                var select = $('<select>').addClass('form-select me-2').css('width', 'auto');
+                                select.append('<option value="Integer">Integer</option>');
+                                select.append('<option value="String">String</option>');
+                                select.append('<option value="Boolean">Boolean</option>');
+                                
+                                var inputWrapper = $('<div>').addClass('input-badge-wrapper d-flex align-items-center');
+                                var input = $('<input>').addClass('form-control me-2').attr('type', 'text');
+                                
+                                var outputName = 'output_' + rowIndex;
+                                var outputBadge = $('<span>').addClass('badge bg-secondary rounded-pill')
+                                    .attr('data-instance-id', instanceId)
+                                    .attr('data-output-name', outputName)
+                                    .text('OUT ' + rowIndex + ': FLT');
+                                
+                                inputWrapper.append(input, outputBadge);
+                                row.append(deleteButton, select, inputWrapper);
+                                inputContainer.append(row);
+                            
+                                select.on('change', function() {
+                                    updateOutputBadge(outputBadge, select.val(), input.val());
+                                    updatePluginResult(instanceId, outputName, input.val(), select.val());
+                                });
+                            
+                                input.on('input', function() {
+                                    updateOutputBadge(outputBadge, select.val(), $(this).val());
+                                    updatePluginResult(instanceId, outputName, $(this).val(), select.val());
+                                });
+                            
+                                makeVariableStorageOutputBadgeDraggable(outputBadge);
+                            }
+                    
+                            function updateRowIndices() {
+                                inputContainer.children('.input-row').each(function(index) {
+                                    var newIndex = index + 1;
+                                    var outputName = 'output_' + newIndex;
+                                    var badge = $(this).find('.badge');
+                                    var currentType = badge.text().split(': ')[1];
+                                    badge.text('OUT ' + newIndex + ': ' + currentType);
+                                    badge.attr('data-output-name', outputName);
+                                    
+                                    // Update pluginResults with new output name
+                                    var oldOutputName = 'output_' + (index + 1);
+                                    if (pluginResults[instanceId][oldOutputName] !== undefined) {
+                                        pluginResults[instanceId][outputName] = pluginResults[instanceId][oldOutputName];
+                                        delete pluginResults[instanceId][oldOutputName];
+                                    }
+                                });
+                            }
+                    
+                            function updatePluginResult(instanceId, outputName, value, type) {
+                                if (!pluginResults[instanceId]) {
+                                    pluginResults[instanceId] = {};
+                                }
+                                
+                                switch(type) {
+                                    case 'Integer':
+                                        pluginResults[instanceId][outputName] = parseInt(value) || 0;
+                                        break;
+                                    case 'String':
+                                        pluginResults[instanceId][outputName] = value;
+                                        break;
+                                    case 'Boolean':
+                                        pluginResults[instanceId][outputName] = value.toLowerCase() === 'true';
+                                        break;
+                                    default:
+                                        pluginResults[instanceId][outputName] = value;
+                                }
+                            }
+                    
+                            addInputRow();  // Add the default input row
+                    
+                            var addButton = $('<button>').addClass('btn btn-sm btn-outline-secondary mt-2').text('+').on('click', function(e) {
+                                e.preventDefault();
+                                addInputRow();
+                            });
+                    
+                            form.append(inputContainer, addButton);
+                        } else {
+                            // Generate input fields based on plugin configuration
+                            var inputFields = $('<div>').addClass('input-fields');
+                            var inputs = pluginConfig.inputs;
+            
+                            for (var i = 0; i < inputs.length; i++) {
+                                var input = inputs[i];
+                                var inputField = $('<div>').addClass('form-group');
+                                var label = $('<label>').attr('for', input.name + '-' + instanceId).text(input.description);
+                                var inputElement = $('<input>').addClass('form-control').attr('type', input.type).attr('id', input.name + '-' + instanceId).attr('name', input.name);
+                                inputField.append(label, inputElement);
+                                inputFields.append(inputField);
+            
+                                // Create input badge
+                                var inputBadge = $('<span>').addClass('badge bg-secondary rounded-pill me-2').attr('data-instance-id', instanceId).attr('data-input-name', input.name).text('IN ' + (i + 1) + ': ' + getTypeAbbreviation(input.type));
+                                
+                                // Store original badge information
+                                var originalBadgeInfo = $('<span>').attr('id', 'IN-Base-' + instanceId).attr('hidden', true).text('-IN ' + (i + 1) + ': ' + getTypeAbbreviation(input.type));
+                                inputBadge.append(originalBadgeInfo);
+            
+                                inputBadgeGroup.append(inputBadge);
+            
+                                // Update badge color on input change
+                                (function(inputName, inputType, inputBadge) {
+                                    inputElement.on('input', function() {
+                                        var value = $(this).val();
+                                        var isValid = validateInput(value, inputType);
+                                        inputBadge.removeClass('bg-secondary bg-primary bg-danger bg-success').addClass(isValid ? 'bg-primary' : 'bg-danger');
+                                    });
+                                })(input.name, input.type, inputBadge);
+            
+                                // Add double-click event to reset linked badges
+                                inputBadge.on('dblclick', function() {
+                                    var badge = $(this);
+                                    if (badge.hasClass('bg-success')) {
+                                        var baseInfo = badge.find('span[id^="IN-Base"]')[0];
+                                        var originalText = badge.find('span[id^="IN-Base"]').text().replace('-', '');
+                                        badge.removeClass('bg-success').addClass('bg-secondary').text(originalText);
+                                        badge.append(baseInfo); // Re-append the original info span
+                                        
+                                        // Clear the associated input field
+                                        var inputName = badge.attr('data-input-name');
+                                        var inputElement = $('#' + inputName + '-' + badge.attr('data-instance-id'));
+                                        inputElement.val('');
+                                    }
+                                });
+                            }
+            
+                            // Generate output fields based on plugin configuration
+                            var outputFields = $('<div>').addClass('output-fields');
+                            var outputs = pluginConfig.outputs;
+            
+                            for (var i = 0; i < outputs.length; i++) {
+                                var output = outputs[i];
+                                var outputField = $('<div>').addClass('form-group');
+                                var label = $('<label>').text(output.description);
+                                var outputElement = $('<div>').addClass('form-control-plaintext').attr('id', output.name + '-' + instanceId);
+                                outputField.append(label, outputElement);
+                                outputFields.append(outputField);
+            
+                                // Create output badge
+                                var outputBadge = $('<span>').addClass('badge bg-info rounded-pill me-2').attr('data-instance-id', instanceId).attr('data-output-name', output.name).text('OUT ' + (i + 1) + ': ' + getTypeAbbreviation(output.type));
+                                outputBadgeGroup.append(outputBadge);
+            
+                                makeOutputBadgeDraggable(outputBadge);
+                            }
+            
+                            form.append(inputFields, outputFields);
+            
+                            // Add process button for computational plugins
+                            var processButton = $('<button>').addClass('btn btn-sm btn-outline-secondary').attr('id', 'process-btn-' + instanceId).attr('data-instance-id', cardCount).html('<i class="fa fa-circle text-secondary"></i>').on('click', function() {
+                                form.submit(); // Trigger form submission to execute the plugin
+                            });
+                            buttonGroup.append(processButton);
+            
+                            form.on('submit', function(event) {
+                                event.preventDefault();
+                                var formData = $(this).serializeArray();
+            
+                                // Check if all linked inputs have values before submitting
+                                var allInputsValid = true;
+                                inputBadgeGroup.find('.badge').each(function() {
+                                    var inputBadge = $(this);
+                                    var inputName = inputBadge.attr('data-input-name');
+                                    var inputElement = $('#' + inputName + '-' + inputBadge.attr('data-instance-id'));
+                                    var linkedOutputSpan = inputBadge.find('span[hidden][id^="link-"]');
+                                    if (linkedOutputSpan.length > 0) {
+                                        var linkedInfo = linkedOutputSpan.text().split(' ');
+                                        var outputInstanceId = linkedInfo[0];
+                                        var outputName = linkedInfo[1];
+                                        var outputValue = pluginResults[outputInstanceId];
+            
+                                        if (outputValue !== undefined) {
+                                            // Convert the output value to the correct type
+                                            var inputType = inputBadge.text().split('-')[1].trim().split(' ')[0];
+                                            if (inputType === 'INT') {
+                                                outputValue = parseInt(outputValue[outputName], 10);
+                                            } else if (inputType === 'FLT') {
+                                                outputValue = parseFloat(outputValue[outputName]);
+                                            }
+                                            inputElement.val(outputValue[outputName]);
+                                            formData.push({ name: inputName, value: outputValue[outputName] });
+                                        } else {
+                                            console.error('Linked output value is missing for input:', inputName);
+                                            allInputsValid = false;
+                                            return false; // Break out of each loop
+                                        }
+                                    } else {
+                                        // Validate non-linked input values
+                                        if (!inputElement.val()) {
+                                            console.error('Input value is missing for input:', inputName);
+                                            allInputsValid = false;
+                                            return false; // Break out of each loop
+                                        }
+                                    }
+                                });
+            
+                                if (!allInputsValid) {
+                                    updateProcessButtonStatus('#process-btn-' + instanceId, 'error', true);
+                                    alert('Please ensure all linked outputs have values before processing.');
+                                    return;
+                                }
+            
+                                $.ajax({
+                                    url: '/plugins/' + pluginId + '/execute/',
+                                    type: 'POST',
+                                    data: $.param(formData) + '&instance_id=' + instanceId,
+                                    success: function(response) {
+                                        var output = response.output;
+                                        pluginResults[instanceId] = output;
+                                        // Update the output fields with the result
+                                        outputFields.find('.form-control-plaintext').each(function() {
+                                            var outputName = $(this).attr('id').split('-')[0];
+                                            $(this).text(output[outputName]);
+                                        });
+                                        updateProcessButtonStatus('#process-btn-' + instanceId, 'success');
+                                    },
+                                    error: function(xhr, status, error) {
+                                        var errorResponse = xhr.responseJSON;
+                                        if (errorResponse && errorResponse.error) {
+                                            alert('Error executing plugin: ' + errorResponse.error);
+                                            updateProcessButtonStatus('#process-btn-' + instanceId, 'error');
+                                        } else {
+                                            console.error('Error executing plugin:', error);
+                                            updateProcessButtonStatus('#process-btn-' + instanceId, 'error');
+                                        }
+                                    }
+                                });
+                            });
+                        }
+            
+                        cardBody.append(form);
+                        pluginCard.append(cardHeader, cardBody);
+                        $('#workflow-area').append(pluginCard);
+    
+                        // Add circle to info-area if not variable_storage
+                        if (pluginConfig.plugin_type !== 'variable_storage') {
+                            addCircleToInfoArea(cardCount, instanceId);
+                        }
+            
+                        // Initialize droppable for input badges
+                        initializeDroppable();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error retrieving plugin configuration:', error);
+                    }
+                });
+            }
+
+            // Update the addCircleToInfoArea function
+            function addCircleToInfoArea(cardCount) {
+                var circle = $('<i>')
+                    .addClass('fa fa-circle text-secondary')
+                    .attr('id', 'info-circle-' + cardCount)
+                    .attr('data-card-id', 'card_' + cardCount);
+                $('#status-indicators').append(circle);
+                adjustCircleSize(); // Adjust size after adding a new circle
+            }
+            
+            function moveCardUp(card) {
+                var prev = card.prev('.card');
+                if (prev.length) {
+                    // Move the card
+                    card.insertBefore(prev);
+            
+                    // Update the numbers of all cards
+                    updateCardNumbers();
+                }
+            }
+            
+            function moveCardDown(card) {
+                var next = card.next('.card');
+                if (next.length) {
+                    // Move the card
+                    card.insertAfter(next);
+            
+                    // Update the numbers of all cards
+                    updateCardNumbers();
+                }
+            }
+    
+            function updateCardNumbers() {
+                var count = 0;
+                $('#workflow-area .card').each(function() {
+                    count++;
+                    var oldId = $(this).attr('id');
+                    var newId = 'card_' + count;
+                    $(this).attr('id', newId);
+                    $(this).attr('card-instance-id', count);
+                    
+                    // Update process button ID
+                    $(this).find('button[id^="process-btn-"]').attr('data-instance-id', count);
+                    
+                    // Update info circle ID and data-card-id if it exists
+                    var infoCircle = $('#info-circle-' + oldId.split('_')[1]);
+                    if (infoCircle.length) {
+                        infoCircle.attr('id', 'info-circle-' + count).attr('data-card-id', newId);
+                    }
+                });
+                
+                // Remove any orphaned info circles
+                $('#info-area i[id^="info-circle-"]').each(function() {
+                    var circleId = $(this).attr('id');
+                    var cardNumber = circleId.split('-')[2];
+                    if (!$('#card_' + cardNumber).length) {
+                        $(this).remove();
+                    }
+                });
+                
+                cardCount = count;
+            }
+    
+            function getOrderedPlugins() {
+                var orderedPlugins = [];
+                $('#workflow-area .card').each(function() {
+                    orderedPlugins.push({
+                        id: $(this).attr('id'),
+                        pluginId: $(this).data('plugin-id'),
+                        instanceId: $(this).data('instance-id')
+                    });
+                });
+                return orderedPlugins.sort((a, b) => {
+                    return parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]);
+                });
+            }
+    
+            function makeOutputBadgeDraggable(badge) {
+                badge.draggable({
+                    helper: 'clone',
+                    revert: 'invalid',
+                    zIndex: 9999,
+                    start: function(event, ui) {
+                        $(this).addClass('dragging');
+                        ui.helper.css('pointer-events', 'none');
+            
+                        // Adjust the margin-right of the output-badge-group
+                        var badgeWidth = $(this).outerWidth() + 8;
+                        $(this).closest('.output-badge-group').css('margin-right', badgeWidth);
+                    },
+                    drag: function(event, ui) {
+                        ui.helper.css('left', event.pageX - ui.helper.width() / 2);
+                    },
+                    stop: function() {
+                        $(this).removeClass('dragging');
+                        $(this).css('pointer-events', '');
+            
+                        // Reset the margin-right of the output-badge-group
+                        $(this).closest('.output-badge-group').css('margin-right', '');
+                    }
+                });
+            }
+    
+            function makeVariableStorageOutputBadgeDraggable(badge) {
+                badge.draggable({
+                    helper: function() {
+                        return $(this).clone().css({
+                            'position': 'absolute',
+                            'z-index': 1000,
+                            'opacity': 0.7
+                        });
+                    },
+                    revert: 'invalid',
+                    zIndex: 1000,
+                    start: function(event, ui) {
+                        $(this).css('visibility', 'hidden');
+                    },
+                    stop: function(event, ui) {
+                        $(this).css('visibility', 'visible');
+                    }
+                });
+            }
+            
+            function updateOutputBadge(badge, type, value) {
+                var abbreviation = getTypeAbbreviation_vt(type);
+                var badgeNumber = badge.text().split(':')[0].split(' ')[1];
+                badge.text('OUT ' + badgeNumber + ': ' + abbreviation);
+                
+                if (value.trim() !== '') {
+                    badge.removeClass('bg-secondary').addClass('bg-info');
+                    badge.draggable('enable');
+                } else {
+                    badge.removeClass('bg-info').addClass('bg-secondary');
+                    badge.draggable('disable');
+                }
+            }
+            
+            function getTypeAbbreviation_vt(type) {
+                switch(type) {
+                    case 'Integer':
+                        return 'FLT';
+                    case 'String':
+                        return 'STR';
+                    case 'Boolean':
+                        return 'BOOL';
+                    default:
+                        return 'VAR';
+                }
+            }
+            
+            function validateInput(value, type) {
+                switch (type) {
+                    case 'number':
+                    case 'float':
+                        return !isNaN(parseFloat(value)) && isFinite(value);
+                    case 'boolean':
+                        return value.toLowerCase() === 'true' || value.toLowerCase() === 'false';
+                    default:
+                        return true;
+                }
+            }          
+            
+            // Initialize droppable behavior for input badges
+            function initializeDroppable() {
+                $('.input-badge-group .badge[data-input-name]').droppable({
+                    accept: '.badge[data-output-name]',
+                    drop: function(event, ui) {
+                        var inputBadge = $(this);
+                        var outputBadge = ui.draggable;
+                        var outputInstanceId = outputBadge.attr('data-instance-id');
+                        var outputName = outputBadge.attr('data-output-name');
+                        console.log('Dropping output badge:', outputBadge, 'on input badge:', inputBadge);
+            
+                        // Extract input and output types
+                        var inputType = inputBadge.text().split('-')[1].trim().split(':')[1].trim();
+                        var outputType = outputBadge.text().split(':')[1].trim().split(' ')[0];
+            
+                        if (inputType === outputType) {
+                            // Update input badge text and color
+                            var inputName = inputBadge.attr('data-input-name');
+                            var originalBadgeInfo = inputBadge.find('span[id^="IN-Base"]');
+                            var linkedOutputSpan = $('<span>').attr('id', 'link-' + inputName + '-' + inputBadge.attr('data-instance-id') + '-linked').attr('hidden', true).text(outputInstanceId + ' ' + outputName);
+                            
+                            // Preserve the original content and append the new linked span
+                            var badgeContent = inputBadge.contents().not(originalBadgeInfo).filter(function() {
+                                return this.nodeType === 3; // Keep only the text nodes
+                            }).text();
+                            
+                            inputBadge.html('LINKED: ' + inputType);
+                            inputBadge.append(originalBadgeInfo); // Re-append the original info span
+                            inputBadge.append(linkedOutputSpan); // Append the link info span
+                            inputBadge.removeClass('bg-secondary bg-primary bg-danger').addClass('bg-success');
+                        } else {
+                            console.error('Type mismatch: Input type ' + inputType + ' and Output type ' + outputType);
+                        }
+                    }
+                });
+            }
+    
+            // Generate a unique identifier for the plugin instance
+            function generateUniqueId() {
+                return Math.random().toString(36).substring(7);
+            }
+    
+            // Get the abbreviation for the specified type
+            function getTypeAbbreviation(type) {
+                switch (type) {
+                    case 'number':
+                        return 'INT';
+                    case 'string':
+                        return 'STR';
+                    case 'float':
+                        return 'FLT';
+                    case 'boolean':
+                        return 'BI';
+                    case 'array':
+                        return 'ARY';
+                    case 'object':
+                        return 'OBJ';
+                    case 'bigint':
+                        return 'BIGI';
+                    default:
+                        return type.toUpperCase();
+                }
+            }
+    
+            function transformTitle(title) {
+                return title.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+            }
+    
+            function updateTitles() {
+                $('.plugin-cell h5, .card-header h5').each(function() {
+                    var originalTitle = $(this).text();
+                    var transformedTitle = transformTitle(originalTitle);
+                    $(this).text(transformedTitle);
+                });
+            }
+    
+            updateTitles();
+    
+            // New workflow processing functionality
+            $('#process-workflow-btn').on('click', processWorkflow);
+    
+            async function processWorkflow() {
+                const workflowCards = $('#workflow-area .card').toArray();
+                const $processBtn = $('#process-workflow-btn');
+                const originalBtnText = $processBtn.text();
+                const originalBtnClass = $processBtn.attr('class');
+                const $progressBar = $('.progress-bar'); // Add this line to select the progress bar
+            
+                $processBtn.prop('disabled', true).text('Processing...').removeClass('btn-primary').addClass('btn-secondary');
+            
+                try {
+                    for (let i = 0; i < workflowCards.length; i++) {
+                        const card = $(workflowCards[i]);
+                        const cardId = card.attr('id');
+                        const processBtn = card.find('button[id^="process-btn-"]');
+                        
+                        if (processBtn.length) {
+                            await processPlugin(card, processBtn);
+                            const progress = ((i + 1) / workflowCards.length) * 100; // Calculate progress
+                            $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress); // Update progress bar
+                        }
+                    }
+                } catch (error) {
+                    console.error('Workflow processing failed:', error);
+                    // Handle the error as needed (e.g., show an alert)
+                } finally {
+                    $processBtn.prop('disabled', false).text(originalBtnText).attr('class', originalBtnClass);
+                    
+                }
+            }
+            
+            async function processPlugin(card, processBtn) {
+                return new Promise((resolve, reject) => {
+                  const originalText = processBtn.html();
+                  processBtn.html('<i class="fa fa-spinner fa-spin"></i>');
+              
+                  // Trigger the click event on the process button
+                  processBtn.trigger('click');
+              
+                  // Periodically check the button status
+                  const intervalId = setInterval(() => {
+                    const icon = processBtn.find('i');
+                    const iconClass = icon.attr('class');
+              
+                    if (iconClass.includes('text-danger')) {
+                      clearInterval(intervalId);
+                      reject(new Error('Plugin processing failed'));
+                    } else if (iconClass.includes('text-success')) {
+                      clearInterval(intervalId);
+                      resolve();
+                    }
+                  }, 500); // check every 500ms, adjust as needed
+                });
+            }
+    
+            // Update the updateProcessButtonStatus function
+            function updateProcessButtonStatus(selector, status, isLocalError = false) {
+                var icon = $(selector).find('i');
+                var cardId = $(selector).closest('.card').attr('id');
+                var infoCircleSelector = '#info-circle-' + cardId.split('_')[1];
+                var infoIcon = $(infoCircleSelector);
+            
+                icon.removeClass('text-secondary text-success text-warning text-danger fa-spinner fa-spin');
+                infoIcon.removeClass('text-secondary text-success text-warning text-danger');
+            
+                if (isLocalError) {                
+                    icon.addClass('fa-circle text-danger');
+                    // Flash red/gray for 5 seconds
+                    var flashInterval = setInterval(function() {
+                        icon.toggleClass('text-danger text-secondary');
+                        infoIcon.toggleClass('text-danger text-secondary');
+                    }, 500);
+            
+                    // Stop flashing after 5 seconds
+                    setTimeout(function() {
+                        clearInterval(flashInterval);
+                        icon.removeClass('text-danger text-secondary').addClass('text-secondary');
+                        infoIcon.removeClass('text-danger text-secondary').addClass('text-secondary');
+                    }, 5000);
+                } else {
+                    switch(status) {
+                        case 'success':
+                            icon.addClass('fa-circle text-success');
+                            infoIcon.addClass('text-success');
+                            break;
+                        case 'warning':
+                            icon.addClass('fa-circle text-warning');
+                            infoIcon.addClass('text-warning');
+                            break;
+                        case 'error':
+                            icon.addClass('fa-circle text-danger');
+                            infoIcon.addClass('text-danger');
+                            break;
+                        case 'processing':
+                            icon.addClass('fa-spinner fa-spin text-primary');
+                            infoIcon.addClass('text-primary');
+                            break;
+                        default:
+                            icon.addClass('fa-circle text-secondary');
+                            infoIcon.addClass('text-secondary');
+                    }
+                }
+            }
+    
+            // Update the runPlugin function to use Promises
+            function runPlugin(pluginId, instanceId, form, processButton) {
+                return new Promise((resolve, reject) => {
+                    updateProcessButtonStatus(processButton, 'processing');
+                    
+                    $.ajax({
+                        url: '/plugins/' + pluginId + '/execute/',
+                        type: 'POST',
+                        data: form.serialize() + '&instance_id=' + instanceId,
+                        success: function(response) {
+                            updateProcessButtonStatus(processButton, 'success');
+                            // Update output fields with the result
+                            // ... (existing code to update output fields)
+                            resolve(response);
+                        },
+                        error: function(xhr, status, error) {
+                            updateProcessButtonStatus(processButton, 'error');
+                            // ... (existing error handling code)
+                            reject(error);
+                        }
+                    });
+                });
+            }
+    
+            // Table resizing functionality
+            let isDragging = false;
+            let startY, draggedHeader, initialHeights;
+            const minTableHeight = 50;
+            const animationDuration = 400;
+            let clickTimer = null;
+            let clickDelay = 300;
+            let table3HeaderHeight;
+    
+            function initializeTableHeights(animate = false) {
+                let availableHeight = $('#leftColumn').height();
+                table3HeaderHeight = $('#table3 .table-header').outerHeight();
+                let headerHeights = $('.table-header').toArray().reduce((sum, header) => sum + $(header).outerHeight(), 0);
+                let contentHeight = (availableHeight - headerHeights) / 3;
+                
+                $('.table-container').each(function(index) {
+                    let headerHeight = $(this).find('.table-header').outerHeight();
+                    let newHeight = contentHeight + headerHeight;
+                    if (animate) {
+                        $(this).animate({height: newHeight}, animationDuration);
+                    } else {
+                        $(this).height(newHeight);
+                    }
+                });
+                
+                if (animate) {
+                    setTimeout(updateTableContents, animationDuration);
+                } else {
+                    updateTableContents();
+                }
+            }
+    
+            function updateTableContents() {
+                $('.table-container').each(function() {
+                    let containerHeight = $(this).height();
+                    let headerHeight = $(this).find('.table-header').outerHeight();
+                    $(this).find('.table-content').height(containerHeight - headerHeight);
+                });
+            }
+    
+            function expandTable(tableId) {
+                let availableHeight = $('#leftColumn').height();
+                
+                if (tableId === 'table3') {
+                    let table1Height = minTableHeight;
+                    let table2Height = minTableHeight;
+                    let table3Height = availableHeight - table1Height - table2Height;
+                    
+                    $('#table1').animate({height: table1Height}, animationDuration);
+                    $('#table2').animate({height: table2Height}, animationDuration);
+                    $('#table3').animate({height: table3Height}, animationDuration);
+                } else {
+                    let expandedHeight = availableHeight - minTableHeight - table3HeaderHeight;
+                    
+                    $('#table1').animate({height: tableId === 'table1' ? expandedHeight : minTableHeight}, animationDuration);
+                    $('#table2').animate({height: tableId === 'table2' ? expandedHeight : minTableHeight}, animationDuration);
+                    $('#table3').animate({height: table3HeaderHeight}, animationDuration);
+                }
+    
+                setTimeout(updateTableContents, animationDuration);
+            }
+    
+            $('.table-header').mousedown(function(e) {
+                if (!$(this).hasClass('draggable')) return;
+                e.preventDefault();
+                isDragging = true;
+                startY = e.clientY;
+                draggedHeader = $(this);
+                initialHeights = {
+                    table1: $('#table1').height(),
+                    table2: $('#table2').height(),
+                    table3: $('#table3').height()
+                };
+    
+                $(document).mousemove(function(e) {
+                    if (!isDragging) return;
+                    
+                    let dy = e.clientY - startY;
+                    let draggedTable = draggedHeader.closest('.table-container');
+                    let availableHeight = $('#leftColumn').height();
+                    
+                    if (draggedTable.attr('id') === 'table2') {
+                        let newTable1Height = Math.max(minTableHeight, initialHeights.table1 + dy);
+                        let newTable2Height = Math.max(minTableHeight, initialHeights.table2 - dy);
+                        let newTable3Height = availableHeight - newTable1Height - newTable2Height;
+                        
+                        if (newTable3Height >= table3HeaderHeight) {
+                            $('#table1').height(newTable1Height);
+                            $('#table2').height(newTable2Height);
+                            $('#table3').height(newTable3Height);
+                        }
+                    } else if (draggedTable.attr('id') === 'table3') {
+                        let newTable2Height = Math.max(minTableHeight, initialHeights.table2 + dy);
+                        let newTable3Height = Math.max(table3HeaderHeight, availableHeight - newTable2Height - $('#table1').height());
+                        
+                        $('#table2').height(newTable2Height);
+                        $('#table3').height(newTable3Height);
+                    }
+                    
+                    updateTableContents();
+                });
+    
+                $(document).mouseup(function() {
+                    isDragging = false;
+                    $(document).off('mousemove');
+                    $(document).off('mouseup');
+                });
+            });
+    
+            $('.table-header').on('click', function(e) {
+                let tableId = $(this).closest('.table-container').attr('id');
+                
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    
+                    // Double click detected
+                    setTimeout(function() {
+                        expandTable(tableId);
+                    }, clickDelay);
+                } else {
+                    clickTimer = setTimeout(function() {
+                        clickTimer = null;
+                        
+                        // Single click actions here (if any)
+                    }, clickDelay);
+                }
+                
+                // Triple click
+                if (e.originalEvent.detail === 3) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    setTimeout(function() {
+                        initializeTableHeights(true);
+                    }, clickDelay);
+                }
+            });
+    
+            $(window).resize(function() {
+                initializeTableHeights(false);
+            });
+            
+            initializeTableHeights(false);
+    
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+    
+            // Function to update plugin type icons
+            function updatePluginTypeIcons() {
+                $('.plugin-cell').each(function() {
+                    var pluginType = $(this).data('plugin-type');
+                    var icon = $(this).find('i').first();
+                    
+                    switch(pluginType) {
+                        case 'computational':
+                            icon.removeClass().addClass('fa fa-microchip me-2');
+                            break;
+                        // Add more cases for different plugin types here
+                        default:
+                            icon.removeClass().addClass('fa fa-puzzle-piece me-2');
+                    }
+                });
+            }
+    
+            // Call the function to set initial icons
+            updatePluginTypeIcons();
+    
+            function adjustHeights() {
+                var windowHeight = $(window).height();
+                var navbarHeight = $('.navbar').outerHeight(true);
+                var containerHeight = windowHeight - navbarHeight;
+                
+                $('#wk-container').css('height', containerHeight + 'px');
+                $('#workflow-area').css('height', (containerHeight - 50) + 'px');
+            }
+            
+            $(window).on('resize', adjustHeights);
+            adjustHeights();
+            adjustCircleSize();
+            $(window).on('resize', adjustCircleSize);
+        });
+
+        let currentCircleFontSize = 1; // em
+        
+        function adjustCircleSize() {
+            const container = $('#status-indicators');
+            const circles = container.find('i');
+            currentCircleFontSize = 1; // Reset to default size
+            const maxHeight = container.height();
+        
+            while (container[0].scrollHeight > maxHeight && currentCircleFontSize > 0.5) {
+                currentCircleFontSize -= 0.1;
+                circles.css('font-size', `${currentCircleFontSize}em`);
+            }
+        }
+        
+        // Call this function after adding new circles and on window resize
+        $(window).on('resize', adjustCircleSize);
+        
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,276 @@
+/* Global Styles */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background-color: #F5F5F5;
+    color: #464F4B;
+}
+
+/* Layout Components */
+#leftColumn {
+    height: calc(100vh - 57px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+#workflow-area {
+    overflow-y: scroll; /* Allows scrolling within the workflow area */
+    height: calc(100% - 50px); /* Subtracts the height of info-area */
+    background-color: #F5F5F5;
+    border: 1px solid #2F6D83;
+}
+
+#wk-container {
+    overflow: hidden; /* Prevents scrolling on the container itself */
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #2F6D83;
+    color: #FFFFFF;
+}
+
+/* Table Styles */
+.table-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-header {
+    padding: 10px;
+    flex-shrink: 0;
+    background-color: #7D8A44;
+    color: #FFFFFF;
+}
+
+.table-content {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+/* Plugin Cell Styles */
+.plugin-cell {
+    font-size: smaller;
+}
+
+.plugin-cell:hover {
+    background-color: #5EE2E9;
+    transition: background-color 0.3s ease;
+}
+
+.plugin-cell .fa-microchip {
+    color: #7D8A44;
+}
+
+.plugin-cell .info-icon {
+    color: #2F6D83;
+    cursor: pointer;
+}
+
+.plugin-cell .info-icon:hover {
+    color: #5EE2E9;
+}
+
+/* Card Styles */
+.card {
+    background-color: #FFFFFF;
+    border: 1px solid #7D8A44;
+    box-shadow: 0 2px 5px rgba(70, 79, 75, 0.1);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+/* Badge Styles */
+.badge-group {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: nowrap;
+    min-width: 100px;
+    justify-content: flex-end;
+}
+
+.badge.dragging {
+    position: absolute;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.badge-placeholder {
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Input Row Styles */
+.input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.input-row .form-select {
+    width: auto;
+    flex: 0 0 auto;
+    margin-right: 10px;
+}
+
+.input-badge-wrapper {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+}
+
+.input-badge-wrapper .form-control {
+    flex: 1;
+    min-width: 0;
+    margin-right: 10px;
+}
+
+.input-badge-wrapper .badge {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Button Styles */
+.btn-primary, .nav-link.active {
+    background-color: #7D3A3B;
+    border-color: #7D3A3B;
+    color: #FFFFFF;
+}
+
+.btn-primary:hover, .nav-link:hover {
+    background-color: #5EE2E9;
+    border-color: #5EE2E9;
+    color: #464F4B;
+}
+
+.btn-secondary {
+    background-color: #7D8A44;
+    border-color: #7D8A44;
+    color: #FFFFFF;
+}
+
+.btn-outline-secondary {
+    color: #464F4B;
+    border-color: #464F4B;
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+    color: #FFFFFF;
+    background-color: #464F4B;
+    border-color: #464F4B;
+}
+
+.btn-danger {
+    background-color: transparent;
+    border: none;
+    color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Icon Styles */
+.btn-outline-secondary i.fa-times {
+    color: #7D3A3B;
+}
+
+.btn-outline-secondary i.fa-chevron-down,
+.btn-outline-secondary i.fa-chevron-up {
+    color: #2F6D83;
+}
+
+.btn-outline-secondary i.fa-circle {
+    color: #7D8A44;
+}
+
+.btn-outline-secondary:hover i {
+    color: #5EE2E9 !important;
+}
+
+.btn-outline-secondary:hover i.fa-times {
+    color: #FF9999 !important;
+}
+
+/* Utility Classes */
+.draggable {
+    cursor: ns-resize;
+}
+
+.highlight {
+    color: #5EE2E9;
+}
+
+.ui-draggable-dragging {
+    pointer-events: none;
+}
+
+#info-area {
+    background-color: #F5F5F5;
+    border: 1px solid #464F4B;
+    height: 50px;
+    overflow: hidden;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+
+#status-indicators {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    height: 30px; /* Adjust based on your needs */
+    overflow: hidden;
+}
+
+#status-indicators i {
+    font-size: 1em; /* Start with a default size */
+    margin-right: 1px; /* Minimal spacing between circles */
+}
+
+#process-workflow-btn{
+    margin-right: 0px;
+}
+
+#workflow-progress-bar{
+    margin-left: 10px;
+}
+
+/* Add this to dynamically adjust circle size */
+@media (max-width: 1200px) {
+    #status-indicators i {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 992px) {
+    #status-indicators i {
+        font-size: 0.8em;
+    }
+}
+
+@media (max-width: 768px) {
+    #status-indicators i {
+        font-size: 0.7em;
+    }
+}

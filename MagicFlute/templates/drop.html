@@ -1,0 +1,149 @@
+$(document).ready(function() {
+    // Handle for dragging and collapsing/expanding tables
+    $(".handle").on('click', function() {
+        var tableBody = $(this).next('table').find('tbody');
+        tableBody.toggleClass('show');
+    });
+
+    function resizeTables() {
+        var containerHeight = $('.col-md-2').height();
+        var resultTableHeight = $('.result-table').outerHeight();
+        var processLogHeight = $('.process-log-table').outerHeight();
+        var pluginTableHeight = containerHeight - (processLogHeight + resultTableHeight);
+
+        $('.plugin-table-container').css('height', pluginTableHeight + 'px');
+        $('.process-log-table').css('height', processLogHeight + 'px');
+        $('.result-table').css('height', resultTableHeight + 'px');
+    }
+
+    $(".result-table").draggable({
+        handle: ".handle",
+        axis: "y",
+        containment: ".col-md-2",
+        scroll: false,
+        drag: function(event, ui) {
+            var containerHeight = $('.col-md-2').height();
+            var resultTableTop = ui.position.top;
+            var resultTableHeight = containerHeight - resultTableTop;
+            var processLogHeight = containerHeight - resultTableHeight - $('.plugin-table-container').outerHeight();
+
+            $('.result-table').css('height', resultTableHeight + 'px');
+            $('.process-log-table').css('height', processLogHeight + 'px');
+            resizeTables();
+        },
+        stop: function(event, ui) {
+            resizeTables();
+        }
+    });
+
+    $(".process-log-table").draggable({
+        handle: ".handle",
+        axis: "y",
+        containment: ".col-md-2",
+        scroll: false,
+        drag: function(event, ui) {
+            var containerHeight = $('.col-md-2').height();
+            var processLogTop = ui.position.top;
+            var processLogHeight = containerHeight - processLogTop - $('.result-table').outerHeight();
+            var pluginTableHeight = containerHeight - processLogHeight - $('.result-table').outerHeight();
+
+            $('.process-log-table').css('height', processLogHeight + 'px');
+            $('.plugin-table-container').css('height', pluginTableHeight + 'px');
+            resizeTables();
+        },
+        stop: function(event, ui) {
+            resizeTables();
+        }
+    });
+
+    // Function to add log entry to the process log
+    function addLogEntry(pluginName, status, message) {
+        var statusClass = status === 'success' ? 'text-success' : 'text-danger';
+        var logEntry = '<tr><td>' + pluginName + '</td><td class="' + statusClass + '">' + status + '</td><td>' + message + '</td></tr>';
+        $('#process-log-body').append(logEntry);
+    }
+
+    function logSuccess(pluginName, message) {
+        addLogEntry(pluginName, 'success', message);
+    }
+
+    function logFailure(pluginName, message) {
+        addLogEntry(pluginName, 'failure', message);
+    }
+
+    // Function to initialize form submission handling
+    function initializeFormSubmission(form, pluginName, instanceId, pluginId, inputBadgeGroup, outputFields) {
+        form.on('submit', function(event) {
+            event.preventDefault();
+            var formData = $(this).serializeArray();
+
+            // Check if all linked inputs have values before submitting
+            var allInputsValid = true;
+            inputBadgeGroup.find('.badge').each(function() {
+                var inputBadge = $(this);
+                var inputName = inputBadge.attr('data-input-name');
+                var inputElement = $('#' + inputName + '-' + inputBadge.attr('data-instance-id'));
+                var linkedOutputSpan = inputBadge.find('span[hidden][id^="link-"]');
+                if (linkedOutputSpan.length > 0) {
+                    var linkedInfo = linkedOutputSpan.text().split(' ');
+                    var outputInstanceId = linkedInfo[0];
+                    var outputName = linkedInfo[1];
+                    var outputValue = pluginResults[outputInstanceId];
+
+                    if (outputValue !== undefined) {
+                        inputElement.val(outputValue.result);
+                        formData.push({ name: inputName, value: outputValue.result });
+                    } else {
+                        console.error('Linked output value is missing for input:', inputName);
+                        allInputsValid = false;
+                        return false; // Break out of each loop
+                    }
+                } else {
+                    // Validate non-linked input values
+                    if (!inputElement.val()) {
+                        console.error('Input value is missing for input:', inputName);
+                        allInputsValid = false;
+                        return false; // Break out of each loop
+                    }
+                }
+            });
+
+            if (!allInputsValid) {
+                updateProcessButtonStatus('#process-btn-' + instanceId, 'error', true);
+                alert('Please ensure all linked outputs have values before processing.');
+                return;
+            }
+
+            $.ajax({
+                url: '/plugins/' + pluginId + '/execute/',
+                type: 'POST',
+                data: $.param(formData) + '&instance_id=' + instanceId,
+                success: function(response) {
+                    var output = response.output;
+                    pluginResults[instanceId] = output;
+                    // Update the output fields with the result
+                    outputFields.find('.form-control-plaintext').each(function() {
+                        var outputName = $(this).attr('id').split('-')[0];
+                        $(this).text(output[outputName]);
+                    });
+                    updateProcessButtonStatus('#process-btn-' + instanceId, 'success');
+                    logSuccess(pluginName, 'Execution successful');
+                },
+                error: function(xhr, status, error) {
+                    var errorResponse = xhr.responseJSON;
+                    if (errorResponse && errorResponse.error) {
+                        alert('Error executing plugin: ' + errorResponse.error);
+                        updateProcessButtonStatus('#process-btn-' + instanceId, 'error');
+                        logFailure(pluginName, errorResponse.error);
+                    } else {
+                        console.error('Error executing plugin:', error);
+                        updateProcessButtonStatus('#process-btn-' + instanceId, 'error');
+                        logFailure(pluginName, 'Execution failed');
+                    }
+                }
+            });
+        });
+    }
+    
+    // Other functions and code for plugin handling, draggable/droppable functionality, etc.
+});   
