@@ -635,7 +635,7 @@
             // New workflow processing functionality
             $('#process-workflow-btn').on('click', processWorkflow);
     
-            async function processWorkflow() {
+            {% comment %} async function processWorkflow() {
                 const workflowCards = $('#workflow-area .card').toArray();
                 const $processBtn = $('#process-workflow-btn');
                 const originalBtnText = $processBtn.text();
@@ -669,6 +669,41 @@
                     $('.fa-circle').removeClass('text-success').addClass('text-secondary');
                     $progressBar.css('width', '0%').attr('aria-valuenow', 0);
                 }
+            } {% endcomment %}
+
+            async function processWorkflow(workflowData) {
+                const pluginsData = []; // Initialize an empty array to store plugin data
+              
+                // Loop through each plugin in the workflow
+                for (const plugin of workflowData.plugins) {
+                  const pluginId = plugin.pluginId;
+                  const instanceId = plugin.instanceId;
+                  const inputData = plugin.inputData;
+              
+                  // Process the plugin and get the result
+                  const pluginResult = await processPlugin(pluginId, instanceId, inputData);
+              
+                  // Update the fa-circle, process log, result, and progress bar
+                  const updateData = {
+                    pluginId,
+                    instanceId,
+                    faCircle: { className: 'text-success' }, // Update fa-circle to text-success
+                    processLog: { message: `Plugin ${pluginId} processed successfully` }, // Update process log
+                    result: { output: pluginResult }, // Update result
+                    progressBar: { width: `${(pluginsData.length / workflowData.plugins.length) * 100}%` }, // Update progress bar
+                  };
+              
+                  pluginsData.push(updateData); // Add the update data to the pluginsData array
+              
+                  // Send the update data back to the page
+                  await fetch('/update-workflow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData),
+                  });
+                }
+              
+                return pluginsData; // Return the updated pluginsData array
             }
             
             async function processPlugin(card, processBtn) {

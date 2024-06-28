@@ -36,17 +36,27 @@ def execute_plugin(request, plugin_id):
 
 @csrf_exempt
 def execute_workflow(request):
+    pdb.set_trace()
     workflow_data = json.loads(request.body)
+    plugins_data = processWorkflow(workflow_data)
 
-    # Extract the plugin instances and their connections from the workflow data
-    # ...
+    for plugin_data in plugins_data:
+        plugin_id = plugin_data['pluginId']
+        instance_id = plugin_data['instanceId']
+        input_data = plugin_data['inputData']
+        plugin_result = plugin_data['pluginResult']
 
-    # Execute the plugins in the correct order based on the connections
-    # Pass the output of one plugin as the input to the next plugin
-    # ...
+        # Update the fa-circle, process log, result, and progress bar
+        update_data = {
+            'pluginId': plugin_id,
+            'instanceId': instance_id,
+            'faCircle': {'className': 'text-success'},  # Update fa-circle to text-success
+            'processLog': {'message': f'Plugin {plugin_id} processed successfully'},  # Update process log
+            'result': {'output': plugin_result},  # Update result
+            'progressBar': {'width': '50%'}  # Update progress bar
+        }
 
-    # Collect the output of each plugin instance
-    # ...
+        return JsonResponse({'update': update_data})  # Send JSON data back to the page
 
-    return JsonResponse({'output': workflow_output})
+        # Continue processing the next plugin
 
