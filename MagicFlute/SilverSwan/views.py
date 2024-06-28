@@ -38,7 +38,6 @@ def execute_plugin(request, plugin_id):
 def execute_workflow(request):
     pdb.set_trace()
     workflow_data = json.loads(request.body)
-    plugins_data = processWorkflow(workflow_data)
 
     for plugin_data in plugins_data:
         plugin_id = plugin_data['pluginId']
