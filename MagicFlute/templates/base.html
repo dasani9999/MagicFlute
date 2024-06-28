@@ -643,7 +643,8 @@
                 const $progressBar = $('.progress-bar'); // Add this line to select the progress bar
             
                 $processBtn.prop('disabled', true).text('Processing...').removeClass('btn-primary').addClass('btn-secondary');
-            
+                let varCrdCnt = 0;
+
                 try {
                     for (let i = 0; i < workflowCards.length; i++) {
                         const card = $(workflowCards[i]);
@@ -655,7 +656,8 @@
                             const progress = ((i + 1) / workflowCards.length) * 100; // Calculate progress
                             $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress); // Update progress bar
                         } else { // Update progress bar for Variable plugins or other non-processable cards
-                            const progress = (i / workflowCards.length) * 100; // Update progress calculation
+                            varCrdCnt++
+                            const progress = (i+varCrdCnt / workflowCards.length) * 100; // Update progress calculation
                             $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress);
                         }
                     }
@@ -664,7 +666,8 @@
                     // Handle the error as needed (e.g., show an alert)
                 } finally {
                     $processBtn.prop('disabled', false).text(originalBtnText).attr('class', originalBtnClass);
-                    
+                    $('.fa-circle').removeClass('text-success').addClass('text-secondary');
+                    $progressBar.css('width', '0%').attr('aria-valuenow', 0);
                 }
             }
             
