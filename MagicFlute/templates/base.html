@@ -671,7 +671,8 @@
                 }
             } {% endcomment %}
 
-            async function processWorkflow(workflowData) {
+            async function processWorkflow() {
+                const workflowCards = $('#workflow-area .card').toArray();
                 const pluginsData = []; // Initialize an empty array to store plugin data
               
                 // Loop through each plugin in the workflow
