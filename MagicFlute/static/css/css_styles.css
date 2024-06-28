@@ -256,6 +256,18 @@ body {
     margin-left: 10px;
 }
 
+#process-all-btn {
+    /* Make the button block-level and take full width */
+    display: block;
+    width: 100%;
+    /* Adjust font size based on window size */
+    font-size: 1.5vw; /* 1.5% of the viewport width */
+    /* Optional: add a max-width to prevent excessive growth */
+    max-width: 200px;
+    /* Center the text */
+    text-align: center;
+  }
+
 /* Add this to dynamically adjust circle size */
 @media (max-width: 1200px) {
     #status-indicators i {
@@ -274,3 +286,11 @@ body {
         font-size: 0.7em;
     }
 }
+
+@media (max-width: 400px) {
+    #process-all-btn {
+      /* Reduce font size and padding on smaller screens */
+      font-size: 1.2vw;
+      padding: 4px 8px;
+    }
+  }
