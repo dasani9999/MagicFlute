@@ -677,12 +677,13 @@
               
                 // Loop through each plugin in the workflow
                 for (var plugin of workflowData){
+                    if ( $(plugin).attr('plugin-id') === 'computational') {}
                   const pluginId = $(plugin).attr('plugin-id');
                   const instanceId = $(plugin).attr('serial-id');
                   const inputData = $(plugin.childNodes[1].childNodes[0]).serializeArray();
               
                   // Process the plugin and get the result
-                  const pluginResult = await processPlugin(pluginId, instanceId, inputData);
+                  // const pluginResult = await processPlugin(pluginId, instanceId, inputData);
               
                   // Update the fa-circle, process log, result, and progress bar
                   const updateData = {
