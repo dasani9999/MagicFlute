@@ -635,41 +635,6 @@
             // New workflow processing functionality
             $('#process-workflow-btn').on('click', processWorkflow);
     
-            {% comment %} async function processWorkflow() {
-                const workflowCards = $('#workflow-area .card').toArray();
-                const $processBtn = $('#process-workflow-btn');
-                const originalBtnText = $processBtn.text();
-                const originalBtnClass = $processBtn.attr('class');
-                const $progressBar = $('.progress-bar'); // Add this line to select the progress bar
-            
-                $processBtn.prop('disabled', true).text('Processing...').removeClass('btn-primary').addClass('btn-secondary');
-                let varCrdCnt = 0;
-
-                try {
-                    for (let i = 0; i < workflowCards.length; i++) {
-                        const card = $(workflowCards[i]);
-                        const cardId = card.attr('id');
-                        const processBtn = card.find('button[id^="process-btn-"]');
-                        
-                        if (processBtn.length) {
-                            await processPlugin(card, processBtn);
-                            const progress = ((i + 1) / workflowCards.length) * 100; // Calculate progress
-                            $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress); // Update progress bar
-                        } else { // Update progress bar for Variable plugins or other non-processable cards
-                            varCrdCnt++
-                            const progress = (i+varCrdCnt / workflowCards.length) * 100; // Update progress calculation
-                            $progressBar.css('width', `${progress}%`).attr('aria-valuenow', progress);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Workflow processing failed:', error);
-                    // Handle the error as needed (e.g., show an alert)
-                } finally {
-                    $processBtn.prop('disabled', false).text(originalBtnText).attr('class', originalBtnClass);
-                    $('.fa-circle').removeClass('text-success').addClass('text-secondary');
-                    $progressBar.css('width', '0%').attr('aria-valuenow', 0);
-                }
-            } {% endcomment %}
 
             async function processWorkflow() {
                 const workflowData = $('#workflow-area .card').toArray();
