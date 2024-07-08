@@ -637,42 +637,160 @@
     
 
             async function processWorkflow() {
-                const workflowData = $('#workflow-area .card').toArray();
-                const pluginsData = []; // Initialize an empty array to store plugin data
-              
-                // Loop through each plugin in the workflow
-                for (var plugin of workflowData){
-                    if ( $(plugin).attr('plugin-id') === 'computational') {}
-                  const pluginId = $(plugin).attr('plugin-id');
-                  const instanceId = $(plugin).attr('serial-id');
-                  const inputData = $(plugin.childNodes[1].childNodes[0]).serializeArray();
-              
-                  // Process the plugin and get the result
-                  // const pluginResult = await processPlugin(pluginId, instanceId, inputData);
-              
-                  // Update the fa-circle, process log, result, and progress bar
-                  const updateData = {
-                    pluginId,
-                    instanceId,
-                    faCircle: { className: 'text-success' }, // Update fa-circle to text-success
-                    processLog: { message: `Plugin ${pluginId} processed successfully` }, // Update process log
-                    result: { output: pluginResult }, // Update result
-                    progressBar: { width: `${(pluginsData.length / workflowData.plugins.length) * 100}%` }, // Update progress bar
-                  };
-              
-                  pluginsData.push(updateData); // Add the update data to the pluginsData array
-              
-                  // Send the update data back to the page
-                  await fetch('/update-workflow', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updateData),
-                  });
+                const workflowCards = $('#workflow-area .card').toArray();
+                const $processBtn = $('#process-workflow-btn');
+                const originalBtnText = $processBtn.text();
+                const originalBtnClass = $processBtn.attr('class');
+                const $progressBar = $('.progress-bar');
+
+                $processBtn.prop('disabled', true).text('Processing...').removeClass('btn-primary').addClass('btn-secondary');
+
+                // Gather workflow data
+                const workflowData = workflowCards.map(card => {
+                    const $card = $(card);
+                    const pluginId = $card.attr('plugin-id');
+                    const instanceId = $card.attr('serial-id');
+                    const pluginType = $card.attr('plugin-type');
+
+                    let inputs = [];
+
+                    if (pluginType === 'variable_storage') {
+                        // For variable_storage, gather all input rows
+                        $card.find('.input-row').each(function(index) {
+                            const $row = $(this);
+                            const type = $row.find('select').val();
+                            const value = $row.find('input').val();
+                            inputs.push({
+                                name: `output_${index + 1}`,
+                                type: type,
+                                value: value
+                            });
+                        });
+                    } else {
+                        // For other plugin types, gather inputs and check for links
+                        $card.find('input, select').each(function() {
+                            const $input = $(this);
+                            const name = $input.attr('name');
+                            let value = $input.val();
+                            
+                            // Check if this input is linked
+                            const $badge = $card.find(`.badge[data-input-name="${name}"]`);
+                            if ($badge.hasClass('bg-success')) {
+                                const linkInfo = $badge.find('span[id^="link-"]').text().split(' ');
+                                value = {
+                                    linkedInstanceId: linkInfo[0],
+                                    linkedOutput: linkInfo[1]
+                                };
+                            }
+
+                            inputs.push({ name, value });
+                        });
+                    }
+
+                    return {
+                        pluginId,
+                        instanceId,
+                        pluginType,
+                        inputs
+                    };
+                });
+
+                try {
+                    const response = await fetch('/execute-workflow/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ workflow: workflowData })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const decodedChunk = decoder.decode(value, { stream: true });
+                        const updates = decodedChunk.split('\n').filter(Boolean);
+
+                        for (const update of updates) {
+                            try {
+                                const parsedUpdate = JSON.parse(update);
+                                updateUI(parsedUpdate);
+                            } catch (e) {
+                                console.error('Error parsing update:', e);
+                            }
+                        }
+                    }
+
+                    console.log('Workflow processing completed');
+                } catch (error) {
+                    console.error('Error processing workflow:', error);
+                    // Handle the error (e.g., show an alert to the user)
+                } finally {
+                    $processBtn.prop('disabled', false).text(originalBtnText).attr('class', originalBtnClass);
                 }
-              
-                return pluginsData; // Return the updated pluginsData array
             }
             
+            function updateUI(update) {
+                const { pluginId, instanceId, status, message, result, progress } = update;
+                
+                // Update status indicator
+                const $statusIndicator = $(`#info-circle-${instanceId}`);
+                if ($statusIndicator.length) {
+                    $statusIndicator.removeClass().addClass(`fa fa-circle text-${status}`);
+                }
+                
+                // Update process log
+                $('#process-log-body').append(`
+                    <tr>
+                        <td>${pluginId}</td>
+                        <td>${status}</td>
+                        <td>${message}</td>
+                    </tr>
+                `);
+                
+                // Update result
+                if (result) {
+                    let resultDisplay = JSON.stringify(result, null, 2);
+                    if (typeof result === 'object' && Object.keys(result).length === 1 && 'output' in result) {
+                        resultDisplay = JSON.stringify(result.output, null, 2);
+                    }
+                    $('#result-body').append(`
+                        <tr>
+                            <td>${pluginId}</td>
+                            <td><pre>${resultDisplay}</pre></td>
+                        </tr>
+                    `);
+                }
+                
+                // Update progress bar
+                $('.progress-bar').css('width', `${progress}%`).attr('aria-valuenow', progress);
+
+                // Update the process button for the specific plugin
+                const $processBtn = $(`#process-btn-${instanceId}`);
+                if ($processBtn.length) {
+                    $processBtn.find('i').removeClass().addClass(`fa fa-circle text-${status}`);
+                }
+
+                // If this is a variable_storage plugin, update any linked inputs
+                if (result && typeof result === 'object') {
+                    Object.entries(result).forEach(([outputName, outputValue]) => {
+                        $(`.badge[data-input-name][data-linked-instance="${instanceId}"][data-linked-output="${outputName}"]`)
+                            .each(function() {
+                                const $input = $(`#${$(this).attr('data-input-name')}-${$(this).attr('data-instance-id')}`);
+                                $input.val(outputValue);
+                                $input.trigger('input'); // Trigger any input listeners
+                            });
+                    });
+                }
+            }
+
             async function processPlugin(card, processBtn) {
                 return new Promise((resolve, reject) => {
                   const originalText = processBtn.html();
