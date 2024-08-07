@@ -1,3 +1,4 @@
+<!-- main.html -->
 {% extends 'base.html' %}
 
 {% block content %}
@@ -11,8 +12,14 @@
             <li class="nav-item active">
                 <a class="nav-link" href="#">Home</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Workflows</a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="workflowsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Workflows
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="workflowsDropdown">
+                    <li><a class="dropdown-item" id="saveWorkflowBtn" href="#">Save Workflow</a></li>
+                    <li><a class="dropdown-item" id="loadWorkflowsBtn" href="#">Load Workflows</a></li>
+                </ul>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="#">Settings</a>
@@ -53,33 +60,37 @@
             <!-- Process Log Table -->
             <div id="table2" class="table-container">
                 <div class="table-header draggable">Process Log</div>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Plugin</th>
-                            <th>Status</th>
-                            <th>Message</th>
-                        </tr>
-                    </thead>
-                    <tbody id="process-log-body">
-                        <!-- Log entries will be added here dynamically -->
-                    </tbody>
-                </table>
+                <div class="table-content">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Plugin</th>
+                                <th>Status</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="process-log-body">
+                            <!-- Log entries will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <!-- Result Table -->
             <div id="table3" class="table-container">
                 <div class="table-header draggable">Results</div>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Plugin</th>
-                            <th>Output</th>
-                        </tr>
-                    </thead>
-                    <tbody id="result-body">
-                        <!-- Result entries will be added here dynamically -->
-                    </tbody>
-                </table>
+                <div class="table-content">
+                    <table class="table table-striped" style="background-color: #ffffff;">
+                        <thead>
+                            <tr>
+                                <th>Plugin</th>
+                                <th>Output</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result-body">
+                            <!-- Result entries will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <div id="wk-container" class="col-md-10 d-flex flex-column" style="height: 100vh;">
@@ -89,13 +100,65 @@
                     <div class="col-11">
                         <div id="status-indicators" class="d-flex flex-wrap mb-1"></div>
                         <div id="workflow-progress-bar" class="progress" style="height: 10px;">
-                            <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemax="100"></div>
                         </div>
                     </div>
                     <div class="col-1 d-flex align-items-center justify-content-center">
                         <button id="process-workflow-btn" class="btn btn-primary">Process All</button>
-                    </div>                    
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Workflow Modal -->
+<div class="modal fade" id="saveWorkflowModal" tabindex="-1" aria-labelledby="saveWorkflowModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveWorkflowModalLabel">Save Workflow</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveWorkflowForm">
+                    <div class="mb-3">
+                        <label for="workflowName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="workflowName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="workflowDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="workflowDescription" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Workflows Modal -->
+<div class="modal fade" id="loadWorkflowsModal" tabindex="-1" aria-labelledby="loadWorkflowsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loadWorkflowsModalLabel">Load Workflows</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="savedWorkflowsTable">
+                        <!-- Saved workflows will be added here dynamically -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
